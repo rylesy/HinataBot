@@ -1,7 +1,7 @@
 {
-    "name": "WilliamButcherBot",
+    "name": "Hinata",
     "description": "Telegram Group Management Bot Written In Python Using Pyrogram.",
-    "repository": "https://github.com/thehamkercat/WilliamButcherBot",
+    "repository": "https://github.com/rylesy/WilliamButcherBot",
     "logo": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg",
     "keywords": [
     "python3",
