@@ -75,3 +75,98 @@ mongo_client = MongoClient(MONGO_URL)
 db = mongo_client.wbb
 
 
+async def load_sudoers():
+    global SUDOERS
+    print("[INFO]: LOADING SUDOERS")
+    sudoersdb = db.sudoers
+    sudoers = await sudoersdb.find_one({"sudo": "sudo"})
+    sudoers = [] if not sudoers else sudoers["sudoers"]
+    for user_id in SUDOERS:
+        if user_id not in sudoers:
+            sudoers.append(user_id)
+            await sudoersdb.update_one(
+                {"sudo": "sudo"},
+                {"$set": {"sudoers": sudoers}},
+                upsert=True,
+            )
+    SUDOERS = (SUDOERS + sudoers) if sudoers else SUDOERS
+    print("[INFO]: LOADED SUDOERS")
+
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(load_sudoers())
+
+if not HEROKU:
+    print("[INFO]: INITIALIZING USERBOT CLIENT")
+    app2 = Client(
+        "userbot",
+        phone_number=PHONE_NUMBER,
+        api_id=API_ID,
+        api_hash=API_HASH,
+    )
+else:
+    print("[INFO]: INITIALIZING USERBOT CLIENT")
+    app2 = Client(SESSION_STRING, api_id=API_ID, api_hash=API_HASH)
+
+# Aiohttp Client
+print("[INFO]: INITIALZING AIOHTTP SESSION")
+aiohttpsession = ClientSession()
+# ARQ Client
+print("[INFO]: INITIALIZING ARQ CLIENT")
+arq = ARQ(ARQ_API_URL, ARQ_API_KEY, aiohttpsession)
+# Bot client
+print("[INFO]: INITIALIZING BOT CLIENT")
+app = Client("wbb", bot_token=BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
+
+
+BOT_ID = 0
+BOT_NAME = ""
+BOT_USERNAME = ""
+BOT_MENTION = ""
+BOT_DC_ID = 0
+USERBOT_ID = 0
+USERBOT_NAME = ""
+USERBOT_USERNAME = ""
+USERBOT_DC_ID = 0
+USERBOT_MENTION = ""
+USERBOT_BOT_CHAT_COMMON = []
+
+
+def get_info(app, app2):
+    global BOT_ID, BOT_NAME, BOT_USERNAME, BOT_DC_ID, BOT_MENTION
+    global USERBOT_ID, USERBOT_NAME, USERBOT_USERNAME, USERBOT_DC_ID, USERBOT_MENTION
+    global USERBOT_BOT_CHAT_COMMON
+    getme = app.get_me()
+    getme2 = app2.get_me()
+    BOT_ID = getme.id
+    USERBOT_ID = getme2.id
+    BOT_NAME = (
+        f"{getme.first_name} {getme.last_name}" if getme.last_name else getme.first_name
+    )
+    BOT_USERNAME = getme.username
+    BOT_MENTION = getme.mention
+    BOT_DC_ID = getme.dc_id
+
+    USERBOT_NAME = (
+        f"{getme2.first_name} {getme2.last_name}"
+        if getme2.last_name
+        else getme2.first_name
+    )
+    USERBOT_USERNAME = getme2.username
+    USERBOT_MENTION = getme2.mention
+    USERBOT_DC_ID = getme2.dc_id
+
+    USERBOT_BOT_CHAT_COMMON = [
+        i.id for i in app2.get_common_chats(BOT_USERNAME)
+    ] + SPAM_CHECK_EXCEPTION_GROUPS
+
+
+print("[INFO]: STARTING BOT CLIENT")
+app.start()
+print("[INFO]: STARTING USERBOT CLIENT")
+app2.start()
+print("[INFO]: LOADING UB/BOT PROFILE INFO")
+get_info(app, app2)
+print("[INFO]: LOADED UB/BOT PROFILE INFO")
+if USERBOT_ID not in SUDOERS:
+    SUDOERS.append(USERBOT_ID)
